@@ -1,0 +1,32 @@
+name: Daily GH-CRIZ Pulse
+on:
+  schedule:
+    - cron: '0 0 * * *'  # <-- ORAS: Tuwing 12:00 AM (Midnight) ito gagana mag-isa.
+  workflow_dispatch:      # <-- BUTTON: Para pwede mo ring i-click nang manual sa GitHub.
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # <-- COMPUTER: Gagamit si GitHub ng Linux computer sa cloud.
+    steps:
+      - uses: actions/checkout@v3  # <-- COPY: Kukunin ni GitHub ang code mo mula sa repo.
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'   # <-- INSTALL: I-install ang Python sa cloud computer.
+
+      - name: Install Deps
+        run: pip install PyGithub rich psutil python-dotenv # <-- LIBS: I-install ang kailangang libraries.
+
+      - name: Run Omni Tool
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }} # <-- KEY: Kukunin yung "Susi" na nilagay mo sa Secrets.
+        run: python main.py --auto # <-- ACTION: Patatakbuhin yung "Pulse" feature ng code mo.
+
+      - name: Commit & Push
+        run: |
+          git config --local user.email "bot@crizneil.dev"
+          git config --local user.name "GH-CRIZ-BOT"
+          git add logs/pulse.log
+          git commit -m "System Pulse Check: $(date)" || echo "No changes"
+          git push # <-- SAVE: I-se-save pabalik sa repo para mag-GREEN ang profile mo.

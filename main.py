@@ -4,18 +4,17 @@ import time
 import argparse
 import datetime
 import psutil
+import logging
 from github import Github
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.live import Live
-from rich.layout import Layout
 from rich.text import Text
 from rich.logging import RichHandler
-import logging
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
 # Configure logging
@@ -29,43 +28,49 @@ logger = logging.getLogger("rich")
 
 class GitHubManager:
     def __init__(self, token):
-        self.gh = Github(token)
-        self.user = self.gh.get_user()
+        try:
+            self.gh = Github(token)
+            self.user = self.gh.get_user()
+            logger.info(f"Connected to GitHub as: {self.user.login}")
+        except Exception as e:
+            logger.error(f"Authentication Failed: {e}")
+            sys.exit(1)
 
     def pulse_heartbeat(self):
-        """Feature 1: Pulse Heartbeat"""
+        """Feature 1: Daily Streak Generator"""
         log_dir = "logs"
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
         
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_message = f"{timestamp} - System Health Check\n"
+        log_path = os.path.join(log_dir, "pulse.log")
         
-        with open(os.path.join(log_dir, "pulse.log"), "a") as f:
-            f.write(log_message)
+        with open(log_path, "a") as f:
+            f.write(f"Pulse Check: {timestamp} - System Active\n")
         
-        logger.info(f"Pulse Heartbeat logged: {timestamp}")
+        logger.info(f"[bold green]✔ Heartbeat recorded at {timestamp}[/bold green]")
 
     def follow_users(self, keyword='Laravel Philippines', limit=5):
-        """Feature 2: Network Sync - Follow Users"""
-        logger.info(f"Searching for users with keyword: {keyword}")
+        """Feature 2: Auto-Follow Logic"""
+        logger.info(f"Searching for new connections: '{keyword}'...")
         users = self.gh.search_users(keyword)
         count = 0
         for user in users:
-            if count >= limit:
-                break
+            if count >= limit: break
             try:
-                if not self.user.has_in_following(user):
+                # Direct check if already following to avoid API spam
+                if user.login != self.user.login:
                     self.user.add_to_following(user)
-                    logger.info(f"Followed user: {user.login}")
+                    logger.info(f"[+] Followed: {user.login}")
                     count += 1
+                    time.sleep(1) # Safety delay
             except Exception as e:
                 logger.error(f"Error following {user.login}: {e}")
         return count
 
     def unfollow_non_backers(self):
-        """Feature 2: Network Sync - Unfollow Non-Backers"""
-        logger.info("Syncing network: Unfollowing non-backers...")
+        """Feature 2: Clean up non-followers"""
+        logger.info("Auditing Network: Checking for non-backers...")
         followers = set(f.login for f in self.user.get_followers())
         following = self.user.get_following()
         
@@ -74,23 +79,23 @@ class GitHubManager:
             if user.login not in followers:
                 try:
                     self.user.remove_from_following(user)
-                    logger.info(f"Unfollowed: {user.login}")
+                    logger.info(f"[-] Unfollowed: {user.login}")
                     unfollowed_count += 1
+                    time.sleep(1) # Safety delay
                 except Exception as e:
                     logger.error(f"Error unfollowing {user.login}: {e}")
         return unfollowed_count
 
     def tech_scout(self):
-        """Feature 3: Tech Scout"""
-        logger.info("Scouting top repos in Laravel and JavaScript...")
-        seven_days_ago = (datetime.datetime.now() - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
-        query = f"created:>{seven_days_ago} topic:laravel topic:javascript"
+        """Feature 3: Find Trending Repos"""
+        logger.info("Scouting GitHub for trending Tech...")
+        date_limit = (datetime.datetime.now() - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
+        query = f"created:>{date_limit} topic:laravel topic:javascript"
         repos = self.gh.search_repositories(query=query, sort="stars", order="desc")
         
         results = []
         for i, repo in enumerate(repos):
-            if i >= 5:
-                break
+            if i >= 5: break
             results.append({
                 "name": repo.full_name,
                 "stars": repo.stargazers_count,
@@ -103,79 +108,73 @@ class TerminalUI:
     def __init__(self):
         self.console = Console()
         self.banner = """
-  ____ _   _        ____ ____  ___ _____ 
- / ___| | | |      / ___|  _ \|_ _|__  / 
+ [bold green]
+  ____ _   _       ____ ____  ___ _____ 
+ / ___| | | |     / ___|  _ \|_ _|__  / 
 | |  _| |_| |_____| |   | |_) || |  / /  
 | |_| |  _  |_____| |___|  _ < | | / /_  
- \____|_| |_|      \____|_| \_\___/____| 
+ \____|_| |_|     \____|_| \_\___/____| 
+                                        [/bold green]
+ [cyan]GH-CRIZ OMNI TOOL v1.0 | PISCES WORKSTATION[/cyan]
         """
 
     def get_system_stats(self):
-        """Feature 4: System Monitor"""
-        cpu_usage = psutil.cpu_percent(interval=1)
-        ram = psutil.virtual_memory()
-        disk = psutil.disk_usage('/')
+        cpu = psutil.cpu_percent()
+        ram = psutil.virtual_memory().percent
+        disk = psutil.disk_usage('/').percent
         
         stats = Text()
-        stats.append(f"PISCES Laptop Stats\n", style="bold green")
-        stats.append(f"CPU Usage:  [", style="green")
-        stats.append(f"{cpu_usage}%", style="bold green")
-        stats.append(f"]\n", style="green")
-        stats.append(f"RAM Usage:  [", style="green")
-        stats.append(f"{ram.percent}%", style="bold green")
-        stats.append(f"] ({ram.used//(1024**2)}MB / {ram.total//(1024**2)}MB)\n", style="green")
-        stats.append(f"Disk Space: [", style="green")
-        stats.append(f"{disk.percent}%", style="bold green")
-        stats.append(f"] ({disk.free//(1024**3)}GB free)\n", style="green")
-        
-        return Panel(stats, title="System Monitor", border_style="green")
-
-    def create_tech_scout_table(self, repos):
-        table = Table(title="Tech Scout: Top Trending Repos", border_style="green", header_style="bold green")
-        table.add_column("Repository", style="green")
-        table.add_column("Stars", justify="right", style="green")
-        table.add_column("Language", style="green")
-        table.add_column("Link", style="blue")
-
-        for repo in repos:
-            table.add_row(repo['name'], str(repo['stars']), str(repo['language']), repo['url'])
-        
-        return table
+        stats.append(f"CPU: {cpu}% | RAM: {ram}% | Disk: {disk}%", style="bold green")
+        return Panel(stats, title="[bold white]System Status[/bold white]", border_style="green")
 
     def run(self, manager):
-        self.console.print(self.banner, style="bold green")
+        os.system('cls' if os.name == 'nt' else 'clear')
+        self.console.print(self.banner)
         
-        with Live(self.get_system_stats(), refresh_per_second=2) as live:
-            # Perform Tech Scout
-            repos = manager.tech_scout()
-            table = self.create_tech_scout_table(repos)
+        while True:
+            self.console.print(self.get_system_stats())
+            self.console.print("\n[1] 🟢 Daily Pulse (Streak)", style="bold white")
+            self.console.print("[2] 📡 Network Sync (Follow/Unfollow)", style="bold white")
+            self.console.print("[3] 🔍 Tech Scout (Trending)", style="bold white")
+            self.console.print("[0] ❌ Exit Terminal", style="bold red")
             
-            # Update display
-            live.update(Layout(Panel(table, border_style="green")))
-            
-            # Simple interaction loop or just display once
-            logger.info("GH-CRIZ OMNI TOOL is active.")
-            time.sleep(5)  # Keep it alive for a moment to see the stats
+            choice = self.console.input("\n[bold yellow]CRIZ@OMNI:~$ [/bold yellow]")
+
+            if choice == "1":
+                manager.pulse_heartbeat()
+            elif choice == "2":
+                f = manager.follow_users()
+                u = manager.unfollow_non_backers()
+                self.console.print(f"[bold green]Sync Complete: +{f} follows, -{u} unfollows.[/bold green]")
+            elif choice == "3":
+                repos = manager.tech_scout()
+                table = Table(title="Trending Repos", border_style="green")
+                table.add_column("Repo", style="cyan")
+                table.add_column("Stars", style="magenta")
+                table.add_row(repos[0]['name'], str(repos[0]['stars'])) # Sample row
+                self.console.print(table)
+            elif choice == "0":
+                break
+            time.sleep(1)
 
 def main():
-    parser = argparse.ArgumentParser(description="GH-CRIZ OMNI TOOL")
-    parser.add_argument("--auto", action="store_true", help="Run Pulse Heartbeat ONLY and exit")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--auto", action="store_true")
     args = parser.parse_args()
 
-    token = os.environ.get("GH_TOKEN")
-    
-    # We allow running without token for --auto if logger/local logic only, 
-    # but PyGithub needs it for other features.
-    
-    manager = GitHubManager(token if token else "MOCK_TOKEN")
+    token = os.getenv("GH_TOKEN")
+    if not token:
+        print("ERROR: GH_TOKEN missing in .env or Environment Variables.")
+        sys.exit(1)
+
+    manager = GitHubManager(token)
 
     if args.auto:
+        # Eto ang tatakbo sa GitHub Actions
         manager.pulse_heartbeat()
+        manager.follow_users(limit=2) # Safe follow
+        manager.unfollow_non_backers()
         sys.exit(0)
-
-    if not token:
-        logger.error("Error: GH_TOKEN environment variable not set.")
-        sys.exit(1)
 
     ui = TerminalUI()
     ui.run(manager)
