@@ -13,6 +13,10 @@ from rich.layout import Layout
 from rich.text import Text
 from rich.logging import RichHandler
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
