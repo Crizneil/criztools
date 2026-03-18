@@ -1,173 +1,70 @@
 import os
 import sys
-import time
 import argparse
-import datetime
-import psutil
-import logging
 import subprocess
-from github import Github
+import psutil
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
-from rich.live import Live
 from rich.text import Text
-from rich.logging import RichHandler
-from dotenv import load_dotenv, set_key
-
-# Load environment variables
-load_dotenv()
-
-# Configure logging
-logging.basicConfig(
-    level="INFO",
-    format="%(message)s",
-    datefmt="[%X]",
-    handlers=[RichHandler(rich_tracebacks=True, show_path=False)]
-)
-logger = logging.getLogger("rich")
-
-class GitHubManager:
-    def __init__(self, token=None):
-        self.token = token or os.getenv("GH_TOKEN")
-        try:
-            if self.token:
-                self.gh = Github(self.token)
-                self.user = self.gh.get_user()
-                logger.info(f"AUTH SUCCESS: Connected as {self.user.login}")
-            else:
-                self.gh = Github() # Unauthenticated read-only client
-                self.user = None
-                logger.info("SYSTEM READY: Running in Fast Local Mode")
-        except Exception as e:
-            logger.error(f"SYSTEM ERROR: {e}")
-            sys.exit(1)
-
-    def auto_auth(self):
-        """Prompt for token and save to .env"""
-        print("\n[!] GH_TOKEN missing in environment.")
-        token = input("Enter your GitHub Personal Access Token: ").strip()
-        if not token:
-            print("CRITICAL: Token is required.")
-            sys.exit(1)
-        
-        env_path = ".env"
-        if not os.path.exists(env_path):
-            with open(env_path, "w") as f:
-                f.write("")
-        
-        set_key(env_path, "GH_TOKEN", token)
-        print("[+] Token saved to .env")
-        return token
-
-    def pulse_heartbeat(self):
-        """[1] Daily Pulse: Health check log"""
-        log_dir = "logs"
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-        
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_path = os.path.join(log_dir, "pulse.log")
-        
-        with open(log_path, "a") as f:
-            f.write(f"HEALTH_CHECK: {timestamp} - SYSTEM_OK\n")
-        
-        logger.info(f"PULSE: Heartbeat recorded at {timestamp}")
-
-    def network_sync(self):
-        """[2] Network Sync: Follow and Unfollow"""
-        if not self.user:
-            print("\n[!] SECURITY: This feature requires GitHub Authentication.")
-            self.token = self.auto_auth()
-            self.gh = Github(self.token)
-            self.user = self.gh.get_user()
-            
-        # Follow logic
-        keyword = 'Laravel Philippines'
-        logger.info(f"SYNC: Searching users in '{keyword}'...")
-        users = self.gh.search_users(keyword)
-        follow_count = 0
-        for user in users:
-            if follow_count >= 5: break
-            try:
-                if user.login != self.user.login:
-                    self.user.add_to_following(user)
-                    logger.info(f"FOLLOW: {user.login}")
-                    follow_count += 1
-                    time.sleep(1)
-            except Exception:
-                continue
-        
-        # Unfollow logic
-        logger.info("AUDIT: Checking non-followers...")
-        followers = set(f.login for f in self.user.get_followers())
-        following = self.user.get_following()
-        unfollow_count = 0
-        for user in following:
-            if user.login not in followers:
-                try:
-                    self.user.remove_from_following(user)
-                    logger.info(f"UNFOLLOW: {user.login}")
-                    unfollow_count += 1
-                    time.sleep(1)
-                except Exception:
-                    continue
-        
-        logger.info(f"RESULT: +{follow_count} follows, -{unfollow_count} unfollows.")
 
 class GitCenter:
     @staticmethod
     def quick_push():
-        """[3] Git: Quick Push"""
+        print("[*] Starting Quick Push...")
         try:
             subprocess.run(["git", "add", "."], check=True)
-            msg = input("Commit message: ").strip() or "update: workstation sync"
+            msg = input("Commit message (e.g., 'fixed bug'): ").strip() or "auto-commit"
             subprocess.run(["git", "commit", "-m", msg], check=True)
             subprocess.run(["git", "push", "origin", "main"], check=True)
-            print("[+] Push complete.")
+            print("[+] Push complete. Your code is LIVE!")
         except subprocess.CalledProcessError as e:
-            print(f"[-] Git error: {e}")
+            print(f"[-] Push error: Ensure you are in a Git repository and have rights.")
 
     @staticmethod
-    def friend_sync():
-        """[3] Git: Friend Sync (Force Update)"""
+    def pull_updates():
+        print("[*] Pulling latest updates from GitHub...")
         try:
-            branch = input("Branch to sync: ").strip() or "main"
+            branch = input("Branch to pull (default: main): ").strip() or "main"
             subprocess.run(["git", "fetch", "origin", branch], check=True)
-            # Hard reset ensures it flawlessly grabs the latest update even if local files exist
             subprocess.run(["git", "reset", "--hard", f"origin/{branch}"], check=True)
-            print(f"[+] FORCE SYNC SUCCESS: Updated to latest origin/{branch}")
+            print(f"[+] SUCCESS: Your folder is perfectly synced with origin/{branch}")
         except subprocess.CalledProcessError as e:
-            print(f"[-] Sync error: {e}")
+            print(f"[-] Pull error: Ensure you are inside a Git repository.")
+
+    @staticmethod
+    def clone_repo():
+        print("[*] Clone an existing GitHub repository to your PC")
+        repo_url = input("Enter the GitHub repository URL: ").strip()
+        if repo_url:
+            try:
+                subprocess.run(["git", "clone", repo_url], check=True)
+                print(f"[+] Successfully cloned {repo_url}")
+            except subprocess.CalledProcessError:
+                print("[-] Failed to clone. Check the URL.")
 
 class ProjectArchitect:
     @staticmethod
     def initialize():
-        """[4] Architect: Init project"""
-        folder = input("Project name: ").strip()
+        folder = input("New project folder name: ").strip()
         if not folder: return
-        
         try:
             if not os.path.exists(folder):
                 os.makedirs(folder)
             
-            # Save current dir to return later
             original_dir = os.getcwd()
             os.chdir(folder)
             subprocess.run(["git", "init"], check=True)
             
-            # Auto-License
             with open("LICENSE", "w") as f:
-                f.write(f"MIT License\n\nCopyright (c) 2026 Crizneil Bucio\n\n...") # Simplified
+                f.write("MIT License\n\nCopyright (c) 2026 Crizneil Bucio\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.")
             
-            # Scaffolding
             with open("README.md", "w") as f:
-                f.write(f"# {folder}\n\nProject initialized by GH-CRIZ OMNI TOOL.")
+                f.write(f"# {folder}\n\nProject initialized by CRIZ TOOLS.")
             
             with open(".gitignore", "w") as f:
                 f.write("__pycache__/\n.env\n*.log\n")
             
-            print(f"[+] Project '{folder}' architected successfully.")
+            print(f"[+] Project '{folder}' architected successfully. Ready to code!")
             os.chdir(original_dir)
         except Exception as e:
             print(f"[-] Architect error: {e}")
@@ -185,20 +82,20 @@ class WindowsTools:
         if temp_dir:
             try:
                 subprocess.run(['del', '/q/f/s', f'{temp_dir}\\*'], shell=True, stderr=subprocess.DEVNULL)
-                print("[+] Temp files cleared.")
+                print("[+] Temp files wiped. Disk space recovered!")
             except:
-                print("[-] Failed to clear some temp files (they might be in use).")
+                print("[-] Failed to clear some temp files (they might be actively used by Windows).")
                 
     @staticmethod
     def ping_test():
-        print("[*] Pinging 8.8.8.8 for network stability...")
+        print("[*] Pinging Google (8.8.8.8) to check internet dropouts...")
         subprocess.run(["ping", "8.8.8.8"])
         
     @staticmethod
     def update_apps():
-        print("[*] Checking for App Updates via Winget...")
+        print("[*] Commands Windows to find updates for all your installed software...")
         subprocess.run(["winget", "upgrade"])
-        print("\n[!] To install all updates, run: winget upgrade --all")
+        print("\n[!] To automatically install all updates, run: winget upgrade --all")
 
 class TerminalUI:
     def __init__(self):
@@ -216,58 +113,50 @@ class TerminalUI:
         cpu = psutil.cpu_percent()
         ram = psutil.virtual_memory().percent
         disk = psutil.disk_usage('/').percent
-        
         stats = f"CPU: {cpu}% | RAM: {ram}% | DISK: {disk}%"
-        return Panel(Text(stats, style="bold green"), title="[white]SYSTEM MONITOR[/white]", border_style="green")
+        return Panel(Text(stats, justify="center", style="bold green"), style="green")
 
-    def run(self, manager):
+    def run(self):
         while True:
             os.system('cls' if os.name == 'nt' else 'clear')
             self.console.print(self.banner)
             self.console.print(self.get_system_monitor())
             
-            self.console.print("\n[1] [bold cyan]GITHUB TOOLS[/bold cyan]")
-            self.console.print("[2] [bold yellow]WINDOWS TOOLS[/bold yellow]")
+            self.console.print("\n[1] [bold cyan]GITHUB TOOLS[/bold cyan] (Manage Code & Repositories)")
+            self.console.print("[2] [bold yellow]WINDOWS TOOLS[/bold yellow] (Clean & Fix your PC)")
             self.console.print("[0] EXIT\n")
             
             choice = input("CRIZ@OMNI:~$ ").strip()
 
             if choice == "1":
-                self.github_menu(manager)
+                self.github_menu()
             elif choice == "2":
                 self.windows_menu()
             elif choice == "0":
                 print("STATION OFFLINE.")
                 break
 
-    def github_menu(self, manager):
+    def github_menu(self):
         while True:
             os.system('cls' if os.name == 'nt' else 'clear')
             self.console.print(self.banner)
             self.console.print("\n--- [bold cyan]GITHUB TOOLS[/bold cyan] ---")
-            self.console.print("[1] DAILY PULSE")
-            self.console.print("[2] NETWORK SYNC")
-            self.console.print("[3] GIT CENTER")
-            self.console.print("[4] PROJECT ARCHITECT")
+            self.console.print("[1] PROJECT ARCHITECT (Auto-creates new repo folder, README, & License)")
+            self.console.print("[2] GIT QUICK PUSH (Auto-adds all files, asks for commit message, and pushes)")
+            self.console.print("[3] GIT PULL UPDATES (Force-downloads the newest code from GitHub)")
+            self.console.print("[4] GIT CLONE REPO (Downloads an existing GitHub project to your PC)")
             self.console.print("[0] BACK TO MAIN\n")
             
             gh_choice = input("GITHUB@OMNI:~$ ").strip()
             
             if gh_choice == "1":
-                manager.pulse_heartbeat()
-            elif gh_choice == "2":
-                manager.network_sync()
-            elif gh_choice == "3":
-                print("\n[1] QUICK PUSH\n[2] FRIEND SYNC\n[0] BACK")
-                git_choice = input("GIT@OMNI:~$ ").strip()
-                if git_choice == "1":
-                    GitCenter.quick_push()
-                elif git_choice == "2":
-                    GitCenter.friend_sync()
-                elif git_choice == "0":
-                    continue
-            elif gh_choice == "4":
                 ProjectArchitect.initialize()
+            elif gh_choice == "2":
+                GitCenter.quick_push()
+            elif gh_choice == "3":
+                GitCenter.pull_updates()
+            elif gh_choice == "4":
+                GitCenter.clone_repo()
             elif gh_choice == "0":
                 break
                 
@@ -279,10 +168,10 @@ class TerminalUI:
             os.system('cls' if os.name == 'nt' else 'clear')
             self.console.print(self.banner)
             self.console.print("\n--- [bold yellow]WINDOWS TOOLS[/bold yellow] ---")
-            self.console.print("[1] NETWORK PING TEST")
-            self.console.print("[2] FLUSH DNS")
-            self.console.print("[3] SYSTEM CLEAN-UP (TEMP)")
-            self.console.print("[4] WINGET APP UPDATER")
+            self.console.print("[1] NETWORK PING TEST (Checks your internet stability)")
+            self.console.print("[2] FLUSH DNS (Fixes internet routing issues)")
+            self.console.print("[3] SYSTEM CLEAN-UP (Deletes junk %temp% files to save space)")
+            self.console.print("[4] WINGET APP UPDATER (Checks for software updates)")
             self.console.print("[0] BACK TO MAIN\n")
             
             win_choice = input("WINDOWS@OMNI:~$ ").strip()
@@ -302,18 +191,8 @@ class TerminalUI:
                 input("\nPress ENTER to continue...")
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--auto", action="store_true")
-    args = parser.parse_args()
-
-    manager = GitHubManager()
-
-    if args.auto:
-        manager.pulse_heartbeat()
-        sys.exit(0)
-
     ui = TerminalUI()
-    ui.run(manager)
+    ui.run()
 
 if __name__ == "__main__":
     main()
