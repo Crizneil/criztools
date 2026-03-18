@@ -1,9 +1,11 @@
-# GH-CRIZ OMNI TOOL
+```console
+┌──(criz㉿pisces)-[~]
+└─$ GH CRIZ 💨💨💨
+```
 
-Professional, minimalist GitHub management tool for the **PISCES Workstation**. 
-Inspired by the "Chris Titus" style—efficient, emoji-free, and high-performance.
+Professional, minimalist GitHub management tools
 
-## 🚀 Quick Deploy
+## Quick Deploy
 
 Run this one-liner in your PowerShell terminal to install and launch:
 
@@ -14,9 +16,12 @@ iwr -useb https://raw.githubusercontent.com/Crizneil/gh-criz-omni-tool/main/inst
 ## 🛠 Features
 
 - **Daily Pulse:** Log system health checks to `logs/pulse.log`.
-- **Network Sync:** Automated follow/unfollow logic (Laravel Philippines).
+- **Network Sync:** Automated follow/unfollow logic 
+
 - **Git Command Center:** Quick Push and Friend Sync utilities.
+
 - **Project Architect:** Rapid project initialization and scaffolding.
+
 - **Auto-Auth:** Guided GitHub Token setup.
 
 ## 🖥 System Monitor
