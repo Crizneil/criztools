@@ -42,24 +42,6 @@ class GitCenter:
             except subprocess.CalledProcessError:
                 print("[-] Failed to clone. Check the URL.")
 
-    @staticmethod
-    def git_status():
-        print("[*] Retrieving your Git Status and recent logs...")
-        subprocess.run(["git", "status"], check=False)
-        print("\n--- LAST 3 COMMITS ---")
-        subprocess.run(["git", "log", "--oneline", "-n", "3"], check=False)
-
-    @staticmethod
-    def undo_commit():
-        print("[*] WARNING: This will un-commit your last local change (files will not be deleted).")
-        confirm = input("Are you sure? (y/n): ").strip().lower()
-        if confirm == 'y':
-            try:
-                subprocess.run(["git", "reset", "--soft", "HEAD~1"], check=True)
-                print("[+] SUCCESS: Last commit was undone. Your files are safe and ready to be fixed.")
-            except subprocess.CalledProcessError:
-                print("[-] Error: Could not undo commit. Make sure you have at least one local commit.")
-
 class ProjectArchitect:
     @staticmethod
     def initialize():
@@ -115,23 +97,6 @@ class WindowsTools:
         subprocess.run(["winget", "upgrade"])
         print("\n[!] To automatically install all updates, run: winget upgrade --all")
 
-    @staticmethod
-    def sfc_scan():
-        print("[*] Scanning and repairing corrupted Windows files... (Requires Admin)")
-        subprocess.run(["sfc", "/scannow"])
-
-    @staticmethod
-    def release_renew_ip():
-        print("[*] Completely resetting and renewing your Internet assigned IP...")
-        subprocess.run(["ipconfig", "/release"], stdout=subprocess.DEVNULL)
-        subprocess.run(["ipconfig", "/renew"])
-        print("[+] Internet connection fully reset!")
-
-    @staticmethod
-    def network_info():
-        print("[*] Displaying core network and IP information...")
-        subprocess.run(["ipconfig"])
-
 class TerminalUI:
     def __init__(self):
         self.console = Console()
@@ -180,8 +145,6 @@ class TerminalUI:
             self.console.print("[2] GIT QUICK PUSH (Auto-adds all files, asks for commit message, and pushes)")
             self.console.print("[3] GIT PULL UPDATES (Force-downloads the newest code from GitHub)")
             self.console.print("[4] GIT CLONE REPO (Downloads an existing GitHub project to your PC)")
-            self.console.print("[5] GIT STATUS (Check what files are modified but not pushed yet)")
-            self.console.print("[6] GIT UNDO LAST COMMIT (Safely un-commits your last change without deleting files)")
             self.console.print("[0] BACK TO MAIN\n")
             
             gh_choice = input("GITHUB@OMNI:~$ ").strip()
@@ -194,14 +157,10 @@ class TerminalUI:
                 GitCenter.pull_updates()
             elif gh_choice == "4":
                 GitCenter.clone_repo()
-            elif gh_choice == "5":
-                GitCenter.git_status()
-            elif gh_choice == "6":
-                GitCenter.undo_commit()
             elif gh_choice == "0":
                 break
                 
-            if gh_choice in ["1", "2", "3", "4", "5", "6"]:
+            if gh_choice in ["1", "2", "3", "4"]:
                 input("\nPress ENTER to continue...")
 
     def windows_menu(self):
@@ -213,9 +172,6 @@ class TerminalUI:
             self.console.print("[2] FLUSH DNS (Fixes internet routing issues)")
             self.console.print("[3] SYSTEM CLEAN-UP (Deletes junk %temp% files to save space)")
             self.console.print("[4] WINGET APP UPDATER (Checks for software updates)")
-            self.console.print("[5] SYSTEM FILE CHECKER (Scans and repairs corrupted Windows files)")
-            self.console.print("[6] INTERNET RESET (Completely resets and renews your IP Address)")
-            self.console.print("[7] SHOW IP INFO (Displays your local IP and network info)")
             self.console.print("[0] BACK TO MAIN\n")
             
             win_choice = input("WINDOWS@OMNI:~$ ").strip()
@@ -228,16 +184,10 @@ class TerminalUI:
                 WindowsTools.clean_temp()
             elif win_choice == "4":
                 WindowsTools.update_apps()
-            elif win_choice == "5":
-                WindowsTools.sfc_scan()
-            elif win_choice == "6":
-                WindowsTools.release_renew_ip()
-            elif win_choice == "7":
-                WindowsTools.network_info()
             elif win_choice == "0":
                 break
                 
-            if win_choice in ["1", "2", "3", "4", "5", "6", "7"]:
+            if win_choice in ["1", "2", "3", "4"]:
                 input("\nPress ENTER to continue...")
 
 def main():
