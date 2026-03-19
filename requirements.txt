@@ -2,3 +2,4 @@ PyGithub
 rich
 psutil
 python-dotenv
+pyperclip
