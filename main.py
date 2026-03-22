@@ -3,9 +3,15 @@ import sys
 import argparse
 import subprocess
 import psutil
+from datetime import datetime
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
+from github import Github
+from dotenv import load_dotenv
+
+load_dotenv()
+
 try:
     import pyperclip
 except ImportError:
@@ -93,6 +99,91 @@ class ProjectArchitect:
         except Exception as e:
             print(f"[-] Architect error: {e}")
 
+class PersonalTools:
+    @staticmethod
+    def github_streak():
+        print("[*] Triggering Daily Streak Commit...")
+        streak_dir = "streak"
+        streak_file = os.path.join(streak_dir, "contribute.txt")
+        
+        if not os.path.exists(streak_dir):
+            os.makedirs(streak_dir)
+            
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with open(streak_file, "a") as f:
+            f.write(f"Streak updated at: {timestamp}\n")
+            
+        try:
+            subprocess.run(["git", "add", streak_file], check=True)
+            subprocess.run(["git", "commit", "-m", f"daily streak: {timestamp}"], check=True)
+            subprocess.run(["git", "push", "origin", "main"], check=True)
+            print(f"[+] Streak successfully updated and pushed! Graph is GREEN. [{timestamp}]")
+        except subprocess.CalledProcessError as e:
+            print(f"[-] Streak Error: Ensure you have git configured and 'origin main' exists.")
+
+    @staticmethod
+    def get_github_client():
+        token = os.getenv("GITHUB_TOKEN")
+        if not token:
+            print("[-] Error: GITHUB_TOKEN not found in .env file.")
+            print("[!] Please add GITHUB_TOKEN=your_token_here to your .env file.")
+            return None
+        return Github(token)
+
+    @staticmethod
+    def auto_follow():
+        g = PersonalTools.get_github_client()
+        if not g: return
+        
+        query = input("Enter search query for users to follow (e.g., 'python developer'): ").strip()
+        if not query: return
+        
+        limit = input("Limit (default: 5): ").strip() or "5"
+        try:
+            limit = int(limit)
+        except ValueError:
+            limit = 5
+            
+        print(f"[*] Searching for users matching '{query}'...")
+        users = g.search_users(query)
+        
+        count = 0
+        for user in users:
+            if count >= limit: break
+            try:
+                g.get_user().add_to_following(user)
+                print(f"[+] Followed: {user.login}")
+                count += 1
+            except Exception as e:
+                print(f"[-] Failed to follow {user.login}: {e}")
+        
+        print(f"[+] Done. Followed {count} users.")
+
+    @staticmethod
+    def auto_unfollow():
+        g = PersonalTools.get_github_client()
+        if not g: return
+        
+        print("[*] Fetching followers and following lists...")
+        user = g.get_user()
+        following = user.get_following()
+        followers = [f.login for f in user.get_followers()]
+        
+        print(f"[*] You are following {following.totalCount} users.")
+        unfollow_count = 0
+        
+        for f_user in following:
+            if f_user.login not in followers:
+                print(f"[*] {f_user.login} is not following you back. Unfollowing...")
+                try:
+                    user.remove_from_following(f_user)
+                    print(f"[+] Unfollowed: {f_user.login}")
+                    unfollow_count += 1
+                except Exception as e:
+                    print(f"[-] Failed to unfollow {f_user.login}: {e}")
+        
+        print(f"[+] Done. Unfollowed {unfollow_count} non-followers.")
+
 class WindowsTools:
     @staticmethod
     def flush_dns():
@@ -146,15 +237,18 @@ class TerminalUI:
             self.console.print(self.banner)
             self.console.print(self.get_system_monitor())
             
-            self.console.print("\n[1] [bold cyan]GITHUB TOOLS[/bold cyan] (Manage Code & Repositories)")
-            self.console.print("[2] [bold yellow]WINDOWS TOOLS[/bold yellow] (Clean & Fix your PC)")
+            self.console.print("\n[1] [bold magenta]PERSONAL TOOLS[/bold magenta] (Auto Streak & Social)")
+            self.console.print("[2] [bold cyan]GITHUB TOOLS[/bold cyan] (Manage Code & Repositories)")
+            self.console.print("[3] [bold yellow]WINDOWS TOOLS[/bold yellow] (Clean & Fix your PC)")
             self.console.print("[0] EXIT\n")
             
             choice = input("CRIZ@OMNI:~$ ").strip()
 
             if choice == "1":
-                self.github_menu()
+                self.personal_menu()
             elif choice == "2":
+                self.github_menu()
+            elif choice == "3":
                 self.windows_menu()
             elif choice == "0":
                 print("STATION OFFLINE.")
@@ -212,6 +306,30 @@ class TerminalUI:
                 break
                 
             if win_choice in ["1", "2", "3", "4"]:
+                input("\nPress ENTER to continue...")
+
+    def personal_menu(self):
+        while True:
+            os.system('cls' if os.name == 'nt' else 'clear')
+            self.console.print(self.banner)
+            self.console.print("\n--- [bold magenta]PERSONAL TOOLS[/bold magenta] ---")
+            self.console.print("[1] AUTO GITHUB STREAK (Trigger daily commit to current repo)")
+            self.console.print("[2] AUTO FOLLOW (Find and follow users based on query)")
+            self.console.print("[3] AUTO UNFOLLOW (Unfollow anyone who doesn't follow you back)")
+            self.console.print("[0] BACK TO MAIN\n")
+            
+            p_choice = input("PERSONAL@OMNI:~$ ").strip()
+            
+            if p_choice == "1":
+                PersonalTools.github_streak()
+            elif p_choice == "2":
+                PersonalTools.auto_follow()
+            elif p_choice == "3":
+                PersonalTools.auto_unfollow()
+            elif p_choice == "0":
+                break
+                
+            if p_choice in ["1", "2", "3"]:
                 input("\nPress ENTER to continue...")
 
 def main():
