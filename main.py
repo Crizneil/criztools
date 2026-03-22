@@ -12,6 +12,8 @@ import socket
 import json
 import time
 import requests
+import threading
+import pyautogui
 from github import Auth, Github
 from dotenv import load_dotenv
 
@@ -530,6 +532,129 @@ class AutomationTools:
             except Exception as e:
                 print(f"[-] Telegram Error for {chat_id}: {e}")
 
+    @staticmethod
+    def send_photo(photo_path, caption=None):
+        token = os.getenv("TELEGRAM_BOT_TOKEN")
+        chat_ids = os.getenv("TELEGRAM_CHAT_ID")
+        if not token or not chat_ids: return
+        
+        url = f"https://api.telegram.org/bot{token}/sendPhoto"
+        for chat_id in chat_ids.split(','):
+            chat_id = chat_id.strip()
+            if not chat_id: continue
+            try:
+                with open(photo_path, 'rb') as photo:
+                    files = {'photo': photo}
+                    data = {'chat_id': chat_id, 'caption': caption}
+                    requests.post(url, files=files, data=data, timeout=20)
+            except Exception as e:
+                print(f"[-] Telegram Photo Error for {chat_id}: {e}")
+
+class TelegramBotListener:
+    def __init__(self):
+        self.token = os.getenv("TELEGRAM_BOT_TOKEN")
+        self.chat_ids = [idx.strip() for idx in (os.getenv("TELEGRAM_CHAT_ID") or "").split(',') if idx.strip()]
+        self.last_update_id = 0
+        self.running = True
+
+    def start(self):
+        if not self.token or not self.chat_ids:
+            # Silent fail for listener if no token
+            return
+        thread = threading.Thread(target=self.poll, daemon=True)
+        thread.start()
+        print("[+] Telegram Interactive Bot started (Background).")
+
+    def poll(self):
+        while self.running:
+            try:
+                url = f"https://api.telegram.org/bot{self.token}/getUpdates"
+                params = {"offset": self.last_update_id + 1, "timeout": 30}
+                response = requests.get(url, params=params, timeout=35).json()
+                
+                if response.get("ok"):
+                    for update in response.get("result", []):
+                        self.last_update_id = update["update_id"]
+                        message = update.get("message")
+                        if not message: continue
+                        
+                        chat_id = str(message["chat"]["id"])
+                        if chat_id not in self.chat_ids:
+                            continue 
+                            
+                        text = message.get("text", "").lower()
+                        self.handle_command(text, chat_id)
+            except Exception:
+                time.sleep(10)
+
+    def handle_command(self, text, chat_id):
+        if text == "/status":
+            cpu = psutil.cpu_percent()
+            ram = psutil.virtual_memory().percent
+            disk = psutil.disk_usage('/').percent
+            AutomationTools.telegram_alert(f"🖥️ PC Status:\nCPU: {cpu}%\nRAM: {ram}%\nDisk: {disk}%")
+        
+        elif text == "/screenshot":
+            AutomationTools.telegram_alert("[*] Capturing screen...")
+            path = "temp_screenshot.png"
+            try:
+                pyautogui.screenshot(path)
+                AutomationTools.send_photo(path, "📸 Current PC Screen")
+                os.remove(path)
+            except Exception as e:
+                AutomationTools.telegram_alert(f"[-] Screenshot failed: {e}")
+            
+        elif text == "/backup":
+            AutomationTools.telegram_alert("[*] Remote Snapshot requested...")
+            PowerTools.project_snapshot()
+            AutomationTools.telegram_alert("[+] Project Snapshot completed successfully.")
+            
+        elif text == "/streak":
+            AutomationTools.telegram_alert("[*] Remote Streak requested...")
+            PersonalTools.github_streak()
+            
+        elif text == "/ping":
+            AutomationTools.telegram_alert("🏓 Pong! Station is Online.")
+            
+        elif text == "/shutdown":
+            AutomationTools.telegram_alert("⚠️ SHUTDOWN COMMAND RECEIVED. PC will turn off in 1 minute.")
+            os.system("shutdown /s /t 60")
+            
+        elif text == "/restart":
+            AutomationTools.telegram_alert("🔄 RESTART COMMAND RECEIVED. PC will restart in 1 minute.")
+            os.system("shutdown /r /t 60")
+        
+        elif text == "/help":
+            help_text = "🤖 Omni-Bot Commands:\n/status - System usage\n/screenshot - Visual check\n/backup - Save project\n/streak - Maintenance\n/ping - Check life\n/shutdown - Turn off\n/restart - Reboot"
+            AutomationTools.telegram_alert(help_text)
+
+class SystemMonitor:
+    def __init__(self):
+        self.running = True
+
+    def start(self):
+        # Only start if Telegram is configured
+        if not os.getenv("TELEGRAM_BOT_TOKEN"): return
+        thread = threading.Thread(target=self.monitor, daemon=True)
+        thread.start()
+        print("[+] Automated System Monitor started (Background).")
+
+    def monitor(self):
+        while self.running:
+            try:
+                disk = psutil.disk_usage('/')
+                if disk.percent > 90:
+                    AutomationTools.telegram_alert(f"🚨 ALERT: LOW DISK SPACE ({disk.percent}% used)!")
+                
+                cpu = psutil.cpu_percent(interval=1)
+                if cpu > 95:
+                    AutomationTools.telegram_alert(f"🚨 ALERT: HIGH CPU USAGE ({cpu}%)!")
+                
+                time.sleep(300) 
+            except Exception:
+                time.sleep(60)
+
+
 class TerminalUI:
     def __init__(self):
         self.console = Console()
@@ -719,6 +844,13 @@ class TerminalUI:
             if choice in ["1", "2"]: input("\nPress ENTER to continue...")
 
 def main():
+    # Start Background Services
+    bot = TelegramBotListener()
+    bot.start()
+    
+    monitor = SystemMonitor()
+    monitor.start()
+
     ui = TerminalUI()
     ui.run()
 
