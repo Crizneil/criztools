@@ -22,13 +22,23 @@ class GitCenter:
     def quick_push():
         print("[*] Starting Quick Push...")
         try:
-            subprocess.run(["git", "add", "."], check=True)
+            subprocess.run(["git", "add", "."], check=True, capture_output=True, text=True)
             msg = input("Commit message (e.g., 'fixed bug'): ").strip() or "auto-commit"
-            subprocess.run(["git", "commit", "-m", msg], check=True)
-            subprocess.run(["git", "push", "origin", "main"], check=True)
+            subprocess.run(["git", "commit", "-m", msg], check=True, capture_output=True, text=True)
+            
+            # Authentication Injection for Push
+            token = os.getenv("GITHUB_TOKEN")
+            remote_url = subprocess.run(["git", "remote", "get-url", "origin"], capture_output=True, text=True).stdout.strip()
+            
+            if token and "github.com" in remote_url and "https://" in remote_url:
+                auth_url = remote_url.replace("https://", f"https://{token}@")
+                subprocess.run(["git", "push", auth_url, "main"], check=True, capture_output=True, text=True)
+            else:
+                subprocess.run(["git", "push", "origin", "main"], check=True, capture_output=True, text=True)
+                
             print("[+] Push complete. Your code is LIVE!")
         except subprocess.CalledProcessError as e:
-            print(f"[-] Push error: Ensure you are in a Git repository and have rights.")
+            print(f"[-] Push error: {e.stderr}")
 
     @staticmethod
     def pull_updates():
@@ -116,7 +126,17 @@ class PersonalTools:
         try:
             subprocess.run(["git", "add", streak_file], check=True, capture_output=True, text=True)
             subprocess.run(["git", "commit", "-m", f"daily streak: {timestamp}"], check=True, capture_output=True, text=True)
-            subprocess.run(["git", "push", "origin", "main"], check=True, capture_output=True, text=True)
+            
+            # Authentication Injection for Push
+            token = os.getenv("GITHUB_TOKEN")
+            remote_url = subprocess.run(["git", "remote", "get-url", "origin"], capture_output=True, text=True).stdout.strip()
+            
+            if token and "github.com" in remote_url and "https://" in remote_url:
+                auth_url = remote_url.replace("https://", f"https://{token}@")
+                subprocess.run(["git", "push", auth_url, "main"], check=True, capture_output=True, text=True)
+            else:
+                subprocess.run(["git", "push", "origin", "main"], check=True, capture_output=True, text=True)
+                
             print(f"[+] Streak successfully updated and pushed! Graph is GREEN. [{timestamp}]")
         except subprocess.CalledProcessError as e:
             print(f"[-] Streak Error:")
