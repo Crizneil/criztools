@@ -331,20 +331,26 @@ class PowerTools:
             cmd = input("NOTES@OMNI:~$ ").strip().lower()
             
             if cmd == 'a':
-                new_note = input("Enter note: ").strip()
-                if new_note:
-                    notes.append(new_note)
-                    with open(notes_file, 'w') as f:
-                        json.dump(notes, f)
+                new_note_text = input("Enter note: ").strip()
+                if new_note_text:
+                    notes.append({"id": len(notes)+1, "text": new_note_text, "time": datetime.now().strftime("%Y-%m-%d %H:%M")})
+                    PowerTools.save_notes(notes)
+                    print("[+] Note captured.")
+                    AutomationTools.telegram_alert(f"📝 QUICK NOTES: Added new note: {new_note_text[:50]}...")
             elif cmd == 'd':
                 try:
                     num = int(input("Enter note number to delete: "))
-                    if 1 <= num <= len(notes):
-                        notes.pop(num-1)
-                        with open(notes_file, 'w') as f:
-                            json.dump(notes, f)
-                except:
-                    pass
+                    if 0 < num <= len(notes):
+                        removed = notes.pop(num-1)
+                        PowerTools.save_notes(notes)
+                        print(f"[+] Removed: {removed['text']}")
+                        AutomationTools.telegram_alert(f"🗑️ QUICK NOTES: Deleted note: {removed['text'][:50]}...")
+                    else:
+                        print("[-] Invalid note number.")
+                except ValueError:
+                    print("[-] Invalid input. Please enter a number.")
+                except Exception as e:
+                    print(f"[-] Error deleting note: {e}")
             elif cmd == 'b':
                 break
 
@@ -494,9 +500,13 @@ class WindowsTools:
     @staticmethod
     def update_apps():
         print("[*] Commands Windows to find updates for all your installed software...")
-        subprocess.run(["winget", "upgrade"])
-        print("\n[!] To automatically install all updates, run: winget upgrade --all")
-        AutomationTools.telegram_alert("🆙 WINDOWS: Winget check for app updates finished.")
+        try:
+            subprocess.run(["winget", "upgrade"], check=True)
+            print("\n[!] To automatically install all updates, run: winget upgrade --all")
+            AutomationTools.telegram_alert("🆙 WINDOWS: Winget check for app updates finished.")
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print("[-] Winget not found or failed. Ensure Windows App Installer is updated.")
+            AutomationTools.telegram_alert("⚠️ WINDOWS: Winget update check failed or not installed.")
 
 class AutomationTools:
     @staticmethod
