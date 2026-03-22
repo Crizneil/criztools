@@ -46,8 +46,10 @@ class GitCenter:
             else:
                 subprocess.run(["git", "push", "origin", "main"], check=True, capture_output=True, text=True)
                 
+            AutomationTools.telegram_alert(f"🚀 GIT PUSH: Successfully pushed code to GitHub (Message: '{msg}')")
             print("[+] Push complete. Your code is LIVE!")
         except subprocess.CalledProcessError as e:
+            AutomationTools.telegram_alert(f"❌ GIT PUSH FAILED: {e.stderr}")
             print(f"[-] Push error: {e.stderr}")
 
     @staticmethod
@@ -57,6 +59,7 @@ class GitCenter:
             branch = input("Branch to pull (default: main): ").strip() or "main"
             subprocess.run(["git", "fetch", "origin", branch], check=True)
             subprocess.run(["git", "reset", "--hard", f"origin/{branch}"], check=True)
+            AutomationTools.telegram_alert(f"📥 GIT PULL: Synced with origin/{branch}")
             print(f"[+] SUCCESS: Your folder is perfectly synced with origin/{branch}")
         except subprocess.CalledProcessError as e:
             print(f"[-] Pull error: Ensure you are inside a Git repository.")
@@ -88,6 +91,7 @@ class GitCenter:
         if repo_url:
             try:
                 subprocess.run(["git", "clone", repo_url], check=True)
+                AutomationTools.telegram_alert(f"🏗️ GIT CLONE: Successfully cloned {repo_url}")
                 print(f"[+] Successfully cloned {repo_url}")
             except subprocess.CalledProcessError:
                 print("[-] Failed to clone. Check the URL.")
@@ -115,6 +119,7 @@ class ProjectArchitect:
                 f.write("__pycache__/\n.env\n*.log\n")
             
             print(f"[+] Project '{folder}' architected successfully. Ready to code!")
+            AutomationTools.telegram_alert(f"🆕 PROJECT ARCHITECT: Initialized project '{folder}'")
             os.chdir(original_dir)
         except Exception as e:
             print(f"[-] Architect error: {e}")
@@ -156,6 +161,7 @@ class PersonalTools:
                 subprocess.run(["git", "push", "origin", "main"], check=True, capture_output=True, text=True)
                 
             print(f"[+] Streak successfully updated and pushed! Graph is GREEN. [{timestamp}]")
+            AutomationTools.telegram_alert(f"🔥 GITHUB STREAK: Auto-commit successful at {timestamp}")
         except subprocess.CalledProcessError as e:
             print(f"[-] Streak Error:")
             if "could not read from remote repository" in str(e.stderr).lower():
@@ -205,6 +211,7 @@ class PersonalTools:
                 print(f"[-] Failed to follow {user.login}: {e}")
         
         print(f"[+] Done. Followed {count} users.")
+        AutomationTools.telegram_alert(f"👤 AUTO-FOLLOW: Followed {count} users for query '{query}'")
 
     @staticmethod
     def auto_unfollow():
@@ -230,6 +237,7 @@ class PersonalTools:
                     print(f"[-] Failed to unfollow {f_user.login}: {e}")
         
         print(f"[+] Done. Unfollowed {unfollow_count} non-followers.")
+        AutomationTools.telegram_alert(f"🧹 AUTO-UNFOLLOW: Removed {unfollow_count} non-followers.")
 
 class PowerTools:
     @staticmethod
@@ -254,6 +262,7 @@ class PowerTools:
                         file_path = os.path.join(root, file)
                         zipf.write(file_path, os.path.relpath(file_path, '.'))
             print(f"[+] Snapshot created successfully: {zip_path}")
+            AutomationTools.telegram_alert(f"📦 PROJECT SNAPSHOT: Created backup '{zip_name}'")
         except Exception as e:
             print(f"[-] Snapshot Error: {e}")
 
@@ -273,6 +282,7 @@ class PowerTools:
             print(f"[+] Download: {download_speed:.2f} Mbps")
             print(f"[+] Upload: {upload_speed:.2f} Mbps")
             print(f"[+] Ping: {ping} ms")
+            AutomationTools.telegram_alert(f"🚀 INTERNET SPEED: {download_speed:.2f} Mbps Down / {upload_speed:.2f} Mbps Up")
         except ImportError:
             print("[-] speedtest-cli not installed. Please run: pip install speedtest-cli")
         except Exception as e:
@@ -293,6 +303,8 @@ class PowerTools:
                     print("[+] Time Remaining: Calculating...")
                 else:
                     print(f"[+] Time Remaining: {seconds // 3600}h {(seconds % 3600) // 60}m")
+            
+            AutomationTools.telegram_alert(f"🔋 BATTERY STATUS: {percent}% ({plugged})")
         else:
             print("[-] No battery detected (likely a Desktop PC).")
 
@@ -351,6 +363,7 @@ class PowerTools:
                     except Exception as e:
                         pass
         print(f"[+] Done. Removed {deleted_count} empty directories.")
+        AutomationTools.telegram_alert(f"🧹 GHOST CLEANUP: Removed {deleted_count} empty folders.")
 
 class DevTools:
     @staticmethod
@@ -367,8 +380,10 @@ class DevTools:
         
         if active_ports:
             print(f"[+] Active Ports found on localhost: {', '.join(map(str, active_ports))}")
+            AutomationTools.telegram_alert(f"🔍 PORT SCANNER: Found active ports: {', '.join(map(str, active_ports))}")
         else:
             print("[-] No common local ports are currently open.")
+            AutomationTools.telegram_alert("🔍 PORT SCANNER: No common developer ports found open.")
 
     @staticmethod
     def env_validator():
@@ -399,8 +414,10 @@ class DevTools:
         missing = [key for key in required_keys if key not in current_keys]
         if missing:
             print(f"[-] Missing keys in .env: {', '.join(missing)}")
+            AutomationTools.telegram_alert(f"⚠️ ENV VALIDATOR: Missing keys found: {', '.join(missing)}")
         else:
             print("[+] Perfect! All required keys from .env.example are present.")
+            AutomationTools.telegram_alert("✅ ENV VALIDATOR: All required .env keys are present.")
 
     @staticmethod
     def api_tester():
@@ -421,6 +438,7 @@ class DevTools:
             print(f"\n[+] Status Code: {response.status_code}")
             print(f"[+] Response Content:")
             print(response.text[:500] + ("..." if len(response.text) > 500 else ""))
+            AutomationTools.telegram_alert(f"🌐 API TESTER: {method} {url} returned {response.status_code}")
         except Exception as e:
             print(f"[-] API Test Error: {e}")
 
@@ -441,6 +459,7 @@ class DevTools:
                     with open("README.md", "a") as f:
                         f.write(f"\n{content}")
                     print("[+] Technology stack added to README.md")
+                    AutomationTools.telegram_alert("📝 README TECH: Updated tech stack in README.md")
                 else:
                     print("[-] README.md not found.")
             except Exception as e:
@@ -453,6 +472,7 @@ class WindowsTools:
     def flush_dns():
         print("[*] Flushing DNS Cache...")
         subprocess.run(["ipconfig", "/flushdns"])
+        AutomationTools.telegram_alert("🌐 WINDOWS: DNS Cache Flushed.")
     
     @staticmethod
     def clean_temp():
@@ -469,12 +489,14 @@ class WindowsTools:
     def ping_test():
         print("[*] Pinging Google (8.8.8.8) to check internet dropouts...")
         subprocess.run(["ping", "8.8.8.8"])
+        AutomationTools.telegram_alert("📡 WINDOWS: Ping test completed.")
         
     @staticmethod
     def update_apps():
         print("[*] Commands Windows to find updates for all your installed software...")
         subprocess.run(["winget", "upgrade"])
         print("\n[!] To automatically install all updates, run: winget upgrade --all")
+        AutomationTools.telegram_alert("🆙 WINDOWS: Winget check for app updates finished.")
 
 class AutomationTools:
     @staticmethod
@@ -499,9 +521,9 @@ class AutomationTools:
                 return
 
             print("[*] Requesting AI suggestion (Simulated)...")
-            # In a real scenario, we'd use the requests library to hit Gemini API
-            # For now, we provide a structured professional suggestion
-            print("> feat: implement advanced automation and power tools suite")
+            suggestion = "feat: implement advanced automation and power tools suite"
+            print(f"> {suggestion}")
+            AutomationTools.telegram_alert(f"🤖 AI COMMIT SUGGESTION: {suggestion}")
         except Exception as e:
             print(f"[-] AI Suggestion Error: {e}")
 
