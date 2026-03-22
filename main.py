@@ -579,22 +579,28 @@ class TelegramBotListener:
                         if not message: continue
                         
                         chat_id = str(message["chat"]["id"])
+                        username = message.get("from", {}).get("username", "Unknown")
+                        text = message.get("text", "").lower()
+                        
+                        print(f"[*] Telegram Msg from {username} ({chat_id}): {text}")
+                        
                         if chat_id not in self.chat_ids:
+                            print(f"[!] Unauthorized Chat ID: {chat_id}")
                             continue 
                             
-                        text = message.get("text", "").lower()
                         self.handle_command(text, chat_id)
-            except Exception:
+            except Exception as e:
+                print(f"[!] Telegram Poll Error: {e}")
                 time.sleep(10)
 
     def handle_command(self, text, chat_id):
-        if text == "/status":
+        if text.startswith("/status"):
             cpu = psutil.cpu_percent()
             ram = psutil.virtual_memory().percent
             disk = psutil.disk_usage('/').percent
             AutomationTools.telegram_alert(f"🖥️ PC Status:\nCPU: {cpu}%\nRAM: {ram}%\nDisk: {disk}%")
         
-        elif text == "/screenshot":
+        elif text.startswith("/screenshot"):
             AutomationTools.telegram_alert("[*] Capturing screen...")
             path = "temp_screenshot.png"
             try:
@@ -604,27 +610,27 @@ class TelegramBotListener:
             except Exception as e:
                 AutomationTools.telegram_alert(f"[-] Screenshot failed: {e}")
             
-        elif text == "/backup":
+        elif text.startswith("/backup"):
             AutomationTools.telegram_alert("[*] Remote Snapshot requested...")
             PowerTools.project_snapshot()
             AutomationTools.telegram_alert("[+] Project Snapshot completed successfully.")
             
-        elif text == "/streak":
+        elif text.startswith("/streak"):
             AutomationTools.telegram_alert("[*] Remote Streak requested...")
             PersonalTools.github_streak()
             
-        elif text == "/ping":
+        elif text.startswith("/ping"):
             AutomationTools.telegram_alert("🏓 Pong! Station is Online.")
             
-        elif text == "/shutdown":
+        elif text.startswith("/shutdown"):
             AutomationTools.telegram_alert("⚠️ SHUTDOWN COMMAND RECEIVED. PC will turn off in 1 minute.")
             os.system("shutdown /s /t 60")
             
-        elif text == "/restart":
+        elif text.startswith("/restart"):
             AutomationTools.telegram_alert("🔄 RESTART COMMAND RECEIVED. PC will restart in 1 minute.")
             os.system("shutdown /r /t 60")
         
-        elif text == "/help":
+        elif text.startswith("/help"):
             help_text = "🤖 Omni-Bot Commands:\n/status - System usage\n/screenshot - Visual check\n/backup - Save project\n/streak - Maintenance\n/ping - Check life\n/shutdown - Turn off\n/restart - Reboot"
             AutomationTools.telegram_alert(help_text)
 
