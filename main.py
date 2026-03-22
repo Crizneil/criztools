@@ -13,7 +13,10 @@ import json
 import time
 import requests
 import threading
-import pyautogui
+try:
+    import pyautogui
+except ImportError:
+    pyautogui = None
 from github import Auth, Github
 from dotenv import load_dotenv
 
@@ -601,6 +604,10 @@ class TelegramBotListener:
             AutomationTools.telegram_alert(f"🖥️ PC Status:\nCPU: {cpu}%\nRAM: {ram}%\nDisk: {disk}%")
         
         elif text.startswith("/screenshot"):
+            if not pyautogui:
+                AutomationTools.telegram_alert("[-] Screenshot error: Missing graphical dependencies.")
+                print("[!] Requested screenshot but pyautogui is not imported.")
+                return
             AutomationTools.telegram_alert("[*] Capturing screen...")
             path = "temp_screenshot.png"
             try:
