@@ -27,7 +27,7 @@ class GitCenter:
             subprocess.run(["git", "commit", "-m", msg], check=True, capture_output=True, text=True)
             
             # Authentication Injection for Push
-            token = os.getenv("GITHUB_TOKEN")
+            token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
             remote_url = subprocess.run(["git", "remote", "get-url", "origin"], capture_output=True, text=True).stdout.strip()
             
             if token and "github.com" in remote_url and "https://" in remote_url:
@@ -128,7 +128,7 @@ class PersonalTools:
             subprocess.run(["git", "commit", "-m", f"daily streak: {timestamp}"], check=True, capture_output=True, text=True)
             
             # Authentication Injection for Push
-            token = os.getenv("GITHUB_TOKEN")
+            token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
             remote_url = subprocess.run(["git", "remote", "get-url", "origin"], capture_output=True, text=True).stdout.strip()
             
             if token and "github.com" in remote_url and "https://" in remote_url:
@@ -151,9 +151,9 @@ class PersonalTools:
 
     @staticmethod
     def get_github_client():
-        token = os.getenv("GITHUB_TOKEN")
+        token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
         if not token:
-            print("[-] Error: GITHUB_TOKEN not found in .env file.")
+            print("[-] Error: GITHUB_TOKEN or GH_TOKEN not found in .env file.")
             print("[!] Please add GITHUB_TOKEN=your_token_here to your .env file.")
             return None
         return Github(token)
